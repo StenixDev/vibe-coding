@@ -35,7 +35,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // If no errors, show success message
     if (empty($errors)) {
-        $success = true;
+        // Prepare DB path one level above public directory
+        $dbPath = __DIR__ . '/../app.sqlite';
+
+        try {
+            // Connect to SQLite with PDO
+            $pdo = new PDO('sqlite:' . $dbPath);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            // Create users table if it doesn't exist
+            $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+
+            // Check for existing username
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE username = :username');
+            $stmt->execute([':username' => $username]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors['username'] = 'Username is already taken.';
+            }
+
+            // Check for existing email
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE email = :email');
+            $stmt->execute([':email' => $email]);
+            if ($stmt->fetchColumn() > 0) {
+                $errors['email'] = 'An account with that email already exists.';
+            }
+
+            // If still no errors, insert the user
+            if (empty($errors)) {
+                // Sanitize email before storing
+                $safeEmail = filter_var($email, FILTER_SANITIZE_EMAIL);
+
+                // Hash the password
+                $hashed = password_hash($password, PASSWORD_DEFAULT);
+
+                $insert = $pdo->prepare('INSERT INTO users (username, email, password) VALUES (:username, :email, :password)');
+                $insert->execute([
+                    ':username' => $username,
+                    ':email' => $safeEmail,
+                    ':password' => $hashed,
+                ]);
+
+                $success = true;
+            }
+
+        } catch (PDOException $e) {
+            // Don't expose internal DB errors to the user. Log and show a generic message.
+            error_log('SQLite error: ' . $e->getMessage());
+            $errors['db'] = 'An internal error occurred. Please try again later.';
+        }
     }
 }
 ?>
