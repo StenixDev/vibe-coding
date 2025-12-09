@@ -1,4 +1,19 @@
 <?php
+// Set secure session cookie parameters before starting session
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Strict',
+    'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? true : false,
+]);
+
+session_start();
+
+// If already logged in, redirect to index
+if (isset($_SESSION['username'])) {
+    header('Location: /');
+    exit();
+}
+
 $errors = [];
 $success = false;
 
@@ -81,7 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':password' => $hashed,
                 ]);
 
-                $success = true;
+                // Log the user in by storing username in session
+                $_SESSION['username'] = $username;
+
+                // Redirect to homepage
+                header('Location: /');
+                exit();
             }
 
         } catch (PDOException $e) {
@@ -102,12 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <h1>Create Your Account</h1>
     
-    <?php if ($success): ?>
-        <div>
-            <h2>Thank You!</h2>
-            <p>Your account has been created successfully. Welcome to Vibe Coding!</p>
-        </div>
-    <?php elseif (!empty($errors)): ?>
+    <?php if (!empty($errors)): ?>
         <div>
             <h2>Registration Error</h2>
             <p>Please fix the following issues:</p>
