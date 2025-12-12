@@ -24,6 +24,7 @@ $username = $isLoggedIn ? $_SESSION['username'] : '';
         <a href="register.php">Sign Up</a>
         <a href="login.php">Log In</a>
     <?php else: ?>
+        <a href="create-critter.php">Create New Critter</a>
         <a href="logout.php">Log Out</a>
     <?php endif; ?>
 </body>
