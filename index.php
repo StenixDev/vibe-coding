@@ -89,6 +89,39 @@ try {
 <body>
     <?php if ($isLoggedIn): ?>
         <h1>Welcome <?php echo htmlspecialchars($username); ?>, <?php echo $dayOfWeek; ?>!</h1>
+        <?php
+        // Show My Critters
+        $myCritters = [];
+        try {
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = :username');
+            $stmt->execute([':username' => $username]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($user) {
+                $userId = $user['id'];
+                $critters = $pdo->prepare('
+                    SELECT a.value AS adjective, n.value AS noun, v.value AS verb, l.value AS location
+                    FROM critters c
+                    JOIN adjectives a ON c.adjective_id = a.id
+                    JOIN nouns n ON c.noun_id = n.id
+                    JOIN verbs v ON c.verb_id = v.id
+                    JOIN locations l ON c.location_id = l.id
+                    WHERE c.author_id = :author_id
+                ');
+                $critters->execute([':author_id' => $userId]);
+                $myCritters = $critters->fetchAll(PDO::FETCH_ASSOC);
+            }
+        } catch (Exception $e) {
+            echo '<div style="color:red;">Error loading critters: ' . htmlspecialchars($e->getMessage()) . '</div>';
+        }
+        ?>
+        <?php if (!empty($myCritters)): ?>
+            <h2>My Critters</h2>
+            <ul>
+            <?php foreach ($myCritters as $critter): ?>
+                <li>The <?php echo htmlspecialchars($critter['adjective']); ?> <?php echo htmlspecialchars($critter['noun']); ?> <?php echo htmlspecialchars($critter['verb']); ?> <?php echo htmlspecialchars($critter['location']); ?></li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
     <?php else: ?>
         <h1>Welcome Guest, <?php echo $dayOfWeek; ?>!</h1>
     <?php endif; ?>

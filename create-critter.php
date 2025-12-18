@@ -90,6 +90,8 @@ try {
                     ':author_id' => $author_id
                 ]);
                 $success = true;
+                header('Location: /');
+                exit();
             }
         }
     }
